@@ -1,4 +1,4 @@
-package jsonparser_test
+package sparser_test
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ func TestNew(t *testing.T) {
 		t.Errorf("Configuration read error.. %s", e)
 	}
 
-	if p := jsonparser.New(b); p != nil {
+	if p := sparser.New(b); p != nil {
 		fmt.Println("Instance created")
 	} else {
 		t.Error("Instance not created")
@@ -59,7 +59,7 @@ func TestParser_Marshal(t *testing.T) {
 		}
 	`
 
-	p := jsonparser.New([]byte(config))
+	p := sparser.New([]byte(config))
 	b, err := p.Marshal(lloyd)
 	s := string(b)
 
@@ -82,7 +82,7 @@ func TestParser_Unmarshal(t *testing.T) {
 		}
 	`
 
-	p := jsonparser.New([]byte(config))
+	p := sparser.New([]byte(config))
 	res, err := p.Unmarshal([]byte(JsonInput))
 
 	if err != nil {

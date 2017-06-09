@@ -1,11 +1,26 @@
 package jsonparser_test
 
 import (
-	"testing"
-	"github.com/Junbong/static-json-parser"
 	"fmt"
+	"github.com/Junbong/static-json-parser"
 	"io/ioutil"
 	"reflect"
+	"testing"
+)
+
+const (
+	JsonInput = `
+		{
+		  "name": "Lloyd",
+		  "age": 30,
+		  "height": 184.53,
+		  "weight": 86.5423,
+		  "score": -47,
+		  "graduated": "true",
+		  "hobby": "Listening Music",
+		  "languages": [ "KR", "EN", "JP", "CN" ]
+		}
+	`
 )
 
 func TestNew(t *testing.T) {
@@ -22,7 +37,37 @@ func TestNew(t *testing.T) {
 }
 
 func TestParser_Marshal(t *testing.T) {
-	// TODO
+	lloyd := struct {
+		Name		string	`sjson:"name" json:"name"`
+		Age		uint	`sjson:"age" json:"age"`
+		Height		float32	`sjson:"height" json:"height"`
+		Weight		float32	`sjson:"weight" json:"weight"`
+		Score		int	`sjson:"score" json:"score"`
+		Graduated	bool	`sjson:"graduated" json:"graduated"`
+	} { "Lloyd", 30, 184.53, 86.5423, -47, true }
+
+	lloydJson := "{\"name\":\"Lloyd\",\"age\":30,\"height\":184.53,\"weight\":86.5423,\"score\":-47,\"graduated\":true}"
+
+	config := `
+		{
+		  "name": "text",
+		  "age": "uint",
+		  "height": "float",
+		  "weight": "float32",
+		  "score": "int",
+		  "graduated": "bool"
+		}
+	`
+
+	p := jsonparser.New([]byte(config))
+	b, err := p.Marshal(lloyd)
+	s := string(b)
+
+	if err != nil {
+		t.Error(err)
+	} else if s != lloydJson {
+		t.Errorf("Marshaled JSON not matched '%s' with '%s'", s, lloydJson)
+	}
 }
 
 func TestParser_Unmarshal(t *testing.T) {
@@ -30,30 +75,15 @@ func TestParser_Unmarshal(t *testing.T) {
 		{
 		  "name": "text",
 		  "age": "uint",
-		  "height": "float32",
+		  "height": "float",
 		  "weight": "float32",
 		  "score": "int",
 		  "graduated": "bool"
 		}
 	`
 
-	input := `
-		{
-		  "name": "Lloyd",
-		  "age": 30,
-		  "height": 184.53,
-		  "weight": 86.5423,
-		  "score": -47,
-		  "graduated": "true",
-		  "hobby": "Listening Music",
-		  "languages": [ "KR", "EN", "JP", "CN" ]
-		}
-	`
-
 	p := jsonparser.New([]byte(config))
-	res, err := p.Unmarshal([]byte(input))
-
-	fmt.Println(res)
+	res, err := p.Unmarshal([]byte(JsonInput))
 
 	if err != nil {
 		t.Error(err)
@@ -72,9 +102,9 @@ func TestParser_Unmarshal(t *testing.T) {
 	} else if res["hobby"] != "Listening Music" {
 		t.Error("Hobby not matched", res["name"], "with", "'Listening Music'")
 	}
-	langs := []interface{} { "KR", "EN", "JP", "CN" }
+	langs := []interface{}{"KR", "EN", "JP", "CN"}
 	s := reflect.ValueOf(res["languages"])
-	for i:=0; i<s.Len(); i++ {
+	for i := 0; i < s.Len(); i++ {
 		if s.Index(i).Interface().(string) != langs[i] {
 			t.Error("Array not matched", s.Index(i).Interface().(string), "with", langs[i])
 		}

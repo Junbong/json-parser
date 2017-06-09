@@ -33,9 +33,60 @@ func New(config []byte) *Parser {
 	return ps
 }
 
-func (p Parser) Marshal(v interface{}) ([]byte, error) {
+func (p Parser) MarshalMap(v map[string]interface{}) ([]byte, error) {
 	// TODO
 	return json.Marshal(v)
+}
+
+func (p Parser) Marshal(v interface{}) ([]byte, error) {
+	/*
+	res := make(map[string]interface{})
+	t := reflect.TypeOf(v)
+	vals := reflect.ValueOf(v)
+
+	fmt.Println("Vals", vals)
+
+	for i:=0; i<t.NumField(); i++ {
+		f := t.Field(i)
+		val := vals.Field(i).Interface()
+
+		// {Name:Name PkgPath: Type:string Tag:json:"name" Offset:0 Index:[0] Anonymous:false}
+		fmt.Printf("%+v\n", f)
+
+		var fieldName string
+
+		// Handle tag
+		// TODO: omitempty
+		// TODO: pass json tag
+		tag := f.Tag.Get("sjson")
+		if tag != "" {
+			fieldName = tag
+		} else {
+			fieldName = f.Name
+		}
+
+		// Put key/value
+		// TODO: type != "" && contains
+		if typ, contains := p.TypeMap[fieldName]; contains {
+			if tv, e := compareAndCastValue(val, typ); e == nil {
+				res[fieldName] = tv
+			} else {
+				return nil, e
+			}
+		} else {
+			res[fieldName] = val
+		}
+	}
+
+	return json.Marshal(res)
+	*/
+
+	return json.Marshal(v)
+}
+
+func compareAndCastValue(v interface{}, t string) (res interface{}, err error) {
+	// TODO: cast value to given type
+	return v, nil
 }
 
 func (p Parser) Unmarshal(data []byte) (res map[string]interface{}, err error) {
@@ -59,6 +110,7 @@ func (p Parser) Unmarshal(data []byte) (res map[string]interface{}, err error) {
 	}
 
 	for k, v := range m {
+		// TODO: type != "" && contains
 		if t, contains := p.TypeMap[k]; contains {
 			if tv, e := castValue(v, t); e == nil {
 				res[k] = tv
@@ -77,20 +129,20 @@ func castValue(v interface{}, t string) (interface{}, error) {
 	case "string", "text":
 		return v.(string), nil
 	case "bool", "boolean":
-		if tv, e := parseBool(v, t); e == nil {
+		if tv, e := castBool(v, t); e == nil {
 			return tv, nil
 		} else {
 			return nil, e
 		}
 	case "int", "int8", "int16", "int32", "int64",
 		"uint", "uint8", "uint16", "uint32", "uint64":
-		if tv, e := parseInt(v, t); e == nil {
+		if tv, e := castInt(v, t); e == nil {
 			return tv, nil
 		} else {
 			return nil, e
 		}
 	case "float", "float32", "float64":
-		if tv, e := parseFloat(v, t); e == nil {
+		if tv, e := castFloat(v, t); e == nil {
 			return tv, nil
 		} else {
 			return nil, e
@@ -100,7 +152,7 @@ func castValue(v interface{}, t string) (interface{}, error) {
 	}
 }
 
-func parseBool(v interface{}, _ string) (interface{}, error) {
+func castBool(v interface{}, _ string) (interface{}, error) {
 	tp := reflect.TypeOf(v)
 	if tp.Kind() == reflect.Bool {
 		return v.(bool), nil
@@ -111,10 +163,19 @@ func parseBool(v interface{}, _ string) (interface{}, error) {
 	}
 }
 
-func parseInt(v interface{}, t string) (interface{}, error) {
-	tp := reflect.TypeOf(v)
-	if tp.String() != "json.Number" {
-		return nil, errors.New("Is not a type of JSON number")
+func checkJsonNumber(v interface{}) error {
+	typ := reflect.TypeOf(v)
+
+	if typ.String() != "json.Number" {
+		return errors.New(fmt.Sprintf("Is not a type of JSON number: %+v, actual: %s", v, typ.String()))
+	}
+
+	return nil
+}
+
+func castInt(v interface{}, t string) (interface{}, error) {
+	if err := checkJsonNumber(v); err != nil {
+		return nil, err
 	}
 	tv := v.(json.Number)
 
@@ -148,10 +209,9 @@ func parseInt(v interface{}, t string) (interface{}, error) {
 	}
 }
 
-func parseFloat(v interface{}, t string) (interface{}, error) {
-	tp := reflect.TypeOf(v)
-	if tp.String() != "json.Number" {
-		return nil, errors.New("Is not a type of JSON number")
+func castFloat(v interface{}, t string) (interface{}, error) {
+	if err := checkJsonNumber(v); err != nil {
+		return nil, err
 	}
 	tv := v.(json.Number)
 
